@@ -34,23 +34,58 @@ router.post('/apply', function (req, res) {
         return res.status(500).json({ error: 'Internal data formatting error.' });
     }
 
-    const maxId = items.reduce((max, item) => (item.id > max ? item.id : max), 0);
-    const newId = maxId + 1;
-
-    const newItem = {
-        id: newId,
-        eventId,
-        userId,
-        eventName
-    };
-
-    items.push(newItem);
-
-    fs.writeFile(filePath, JSON.stringify(items, null, 2), 'utf8', (writeErr) => {
-        if (writeErr) {
-        return res.status(500).json({ error: 'Error saving data to storage.' });
+    fs.readFile(userPath, 'utf8', (eventErr, eventData) => {
+        if (eventErr) {
+            if (eventErr.code === 'ENOENT') {
+                return res.status(404).json({ error: 'Event not found.' });
+            }
+            return res.status(500).json({ error: 'Error reading event storage file.' });
         }
-        return res.status(201).json(newItem);
+
+        let events;
+        try {
+            events = eventData.trim() ? JSON.parse(eventData) : [];
+            if (!Array.isArray(events)) {
+                return res.status(500).json({ error: 'Internal data formatting error.' });
+            }
+        } catch (parseError) {
+            console.error('JSON Parse Error:', parseError);
+            return res.status(500).json({ error: 'Internal data formatting error.' });
+        }
+
+        const selectedEvent = events.find(event => String(event.id) === String(eventId));
+        if (!selectedEvent) {
+            return res.status(404).json({ error: 'Event not found.' });
+        }
+
+        if (selectedEvent.capacity !== undefined && selectedEvent.capacity !== null) {
+            const capacity = Number(selectedEvent.capacity);
+            if (!Number.isFinite(capacity) || capacity < 0) {
+                return res.status(500).json({ error: 'Invalid event capacity.' });
+            }
+
+            const applicationCount = items.filter(item => String(item.eventId) === String(eventId)).length;
+            if (applicationCount >= capacity) {
+                return res.status(400).json({ error: 'Event capacity has been reached.' });
+            }
+        }
+
+        const maxId = items.reduce((max, item) => (item.id > max ? item.id : max), 0);
+        const newItem = {
+            id: maxId + 1,
+            eventId,
+            userId,
+            eventName
+        };
+
+        items.push(newItem);
+
+        fs.writeFile(filePath, JSON.stringify(items, null, 2), 'utf8', (writeErr) => {
+            if (writeErr) {
+                return res.status(500).json({ error: 'Error saving data to storage.' });
+            }
+            return res.status(201).json(newItem);
+        });
     });
     });
 });
@@ -115,7 +150,6 @@ router.get('/user-events/:userId', function (req, res) {
         }
     });
 
-
 });
 
-
+module.exports = router;
