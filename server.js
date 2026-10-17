@@ -3,8 +3,10 @@ const app = express();
 const port = 8081;
 app.use(express.json()); 
 const eventController = require('./controller/EventControler');
+const registerController = require('./controller/RegisterController');
 
 app.use('/event', eventController);
+app.use('/register', registerController);
 
 //Global Error-handling middleware
 app.use((err,req,res,next)=>{
