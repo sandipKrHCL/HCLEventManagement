@@ -127,7 +127,7 @@ router.delete('/delete', (req, res) => {
         if (err) return res.status(500).json({ error: 'Error reading storage file.' }); 
         
         try { 
-            let users = data.trim() ? JSON.parse(data) : []; 
+            let users = data.trim() ? JSON.parse(data) :[]; 
             const userExists = users.some(u => u.id === id); 
             
             if (!userExists) { 
